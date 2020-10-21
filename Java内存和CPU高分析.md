@@ -19,6 +19,7 @@
 # 查看堆内存分布,3代都能看到
 ./jmap -heap pid
 ```
+
 ![20201021162413](https://deemoprobe.oss-cn-shanghai.aliyuncs.com/images/20201021162413.png)
 
 ### GC
