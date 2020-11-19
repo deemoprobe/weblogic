@@ -1,24 +1,8 @@
-# weblogic12全流程安装
+# 1. weblogic12全流程安装
 
-- [weblogic12全流程安装](#weblogic12全流程安装)
-  - [安装前检查工作](#安装前检查工作)
-    - [操作系统版本](#操作系统版本)
-    - [检查hosts](#检查hosts)
-    - [同步时间](#同步时间)
-  - [创建相关用户](#创建相关用户)
-  - [目录赋权](#目录赋权)
-  - [部署jdk](#部署jdk)
-  - [配置用户环境变量](#配置用户环境变量)
-  - [静默安装weblogic12c](#静默安装weblogic12c)
-  - [创建domain](#创建domain)
-  - [创建后的优化](#创建后的优化)
-  - [创建Server](#创建server)
-  - [控制台优化](#控制台优化)
-  - [打补丁](#打补丁)
+## 1.1. 安装前检查工作
 
-## 安装前检查工作
-
-### 操作系统版本
+### 1.1.1. 操作系统版本
 
 注：做weblogic集群的节点操作系统版本需要保持一致
 
@@ -28,7 +12,7 @@ or
 cat /etc/redhat-release
 ```
 
-### 检查hosts
+### 1.1.2. 检查hosts
 
 /etc/hosts文件中配置的主机名必须和hostname一致，并且需要计入同一集群中所有server的IP和hostname的映射
 
@@ -39,7 +23,7 @@ cat /etc/redhat-release
 192.168.127.16  localhost
 ```
 
-### 同步时间
+### 1.1.3. 同步时间
 
 ```shell
 # 先查看是否已经设定
@@ -50,18 +34,19 @@ crontab -e
 # 注：若是编辑/etc/crontab文件来设定定时任务，需要在写入后执行crontab /etc/crontab来使之生效
 ```
 
-## 创建相关用户
+## 1.2. 创建相关用户
 
 ```shell
 # 权限分离
-groupadd -g 500 wls
-useradd -u 500 -g wls -G wheel -d /home/wls wls
-useradd -u 530 -g wls -G wheel -d /home/weblogic weblogic
-echo "%TGB7ygvwls110" | passwd --stdin wls
+groupadd -g 500 admin
+useradd -u 500 -g admin -G wheel -d /home/admin admin
+useradd -u 530 -g admin -G wheel -d /home/weblogic weblogic
+# 配置口令
+echo "%TGB7ygvadmin110" | passwd --stdin admin
 echo "%TGB7ygvweblogic110" | passwd --stdin weblogic
 ```
 
-## 目录赋权
+## 1.3. 目录赋权
 
 ```shell
 # 创建相关目录并赋权
@@ -72,13 +57,13 @@ mkdir -p /app/applications/testdomain/logs
 mkdir -p /app/applications/testdomain/script
 cd /app
 mkdir install weblogic oraInventory
-chown -R wls. install/ weblogic/ oraInventory/
+chown -R admin. install/ weblogic/ oraInventory/
 chown -R weblogic. applications/
 chmod -R 775 applications/
 chmod -R 755 install/ weblogic/ oraInventory/
 ```
 
-## 部署jdk
+## 1.4. 部署jdk
 
 ```shell
 mkdir /usr/java
@@ -86,10 +71,10 @@ tar -xvf jdk1.8.0_192.tar
 chmod -R 755 /usr/java
 ```
 
-## 配置用户环境变量
+## 1.5. 配置用户环境变量
 
 ```shell
-vi /home/wls/.bash_profile
+vi /home/admin/.bash_profile
 umask 022
 ulimit -c unlimited
 export JAVA_HOME=/usr/java/jdk1.8.0_192
@@ -98,25 +83,25 @@ export CLASSPATH=.:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar:$JRE_HOME/lib
 export PATH=$JAVA_HOME/bin:$PATH
 
 vi /home/weblogic/.bash_profile
-alias kill='sudo -u wls kill'
-alias netstat='sudo -u wls netstat'
+alias kill='sudo -u admin kill'
+alias netstat='sudo -u admin netstat'
 umask 002
 ulimit -c unlimited
 
-source /home/wls/.bash_profile
+source /home/admin/.bash_profile
 source /home/weblogic/.bash_profile
 ```
 
-## 静默安装weblogic12c
+## 1.6. 静默安装weblogic12c
 
 ```shell
 cd /app
 # 创建初始化文件
 vi oraInst.loc
 inventory_loc=/app/oraInventory
-inst_group=wls
+inst_group=admin
 # 创建响应文件
-vi wls.rsp
+vi admin.rsp
 [ENGINE]
 # DO NOT CHANGE THIS.
 Response File Version=1.0.0.0
@@ -126,28 +111,28 @@ INSTALL_TYPE=weblogic Server
 DECLINE_SECURITY_UPDATES=true
 SECURITY_UPDATES_VIA_MYORACLESUPPORT=false
 # 安装
-java -jar fmw_12.2.1.3.0_wls.jar -silent -responseFile /app/install/wls.rsp -invPtrLoc /app/install/oraInst.loc
+java -jar fmw_12.2.1.3.0_admin.jar -silent -responseFile /app/install/admin.rsp -invPtrLoc /app/install/oraInst.loc
 # 注：如果因故需要重新安装，需要清空/app/oraInventory和/app/weblogic下面的文件，隐藏文件也要删除，否则重装会报错
 # 验证安装版本
-java -cp /app/weblogic/wlserver/server/lib/weblogic.jar weblogic.version
+java -cp /app/weblogic/adminerver/server/lib/weblogic.jar weblogic.version
 ```
 
-## 创建domain
+## 1.7. 创建domain
 
 ```shell
 # 添加随机数，解决创建过程过慢的问题
 vi /app/weblogic/oracle_common/common/bin/config_internal.sh
 # 对应配置添加 -Djava.security.egd=file:///dev/urandom
 JVM_ARGS=" -Djava.security.egd=file:///dev/urandom -Dpython...${CONFIG_JVM_ARGS}"
-# 创建脚本，注意wls.jar文件若提示不存在，查找出来换一下路径即可
+# 创建脚本，注意admin.jar文件若提示不存在，查找出来换一下路径即可
 vi create_domain.py
-readTemplate('/app/weblogic/wlserver/common/templates/wls/wls.jar')
+readTemplate('/app/weblogic/adminerver/common/templates/admin/admin.jar')
 cd('Server/AdminServer')
 set('ListenPort',7001)
 cmo.setName('AdminServer')
 cd('/')
 cd('Security/base_domain/User/weblogic')
-cmo.setName('wls')
+cmo.setName('admin')
 cmo.setPassword('weblogic123')
 setOption('ServerStartMode','prod')
 setOption('OverwriteDomain','true')
@@ -155,21 +140,21 @@ writeDomain('/app/weblogic/user_projects/domains/testdomain')
 closeTemplate()
 exit()
 # 执行脚本
-sh /app/weblogic/oracle_common/common/bin/wlst.sh create_domain.py
+sh /app/weblogic/oracle_common/common/bin/admint.sh create_domain.py
 # 注：若还是创建过慢，可以输入命令 export CONFIG_JVM_ARGS='-Djava.security.egd=file:///dev/urandom' 设置临时变量加速
 ```
 
-## 创建后的优化
+## 1.8. 创建后的优化
 
 ```shell
 # 配置默认切换路径
-vi /home/wls/.bash_profile
+vi /home/admin/.bash_profile
 cd /app/weblogic/user_projects/domains/testdomain
 
 vi /home/weblogic/.bash_profile
 cd /app/applications/testdomain/script
 
-source /home/wls/.bash_profile
+source /home/admin/.bash_profile
 source /home/weblogic/.bash_profile
 
 # 为weblogic用户添加权限
@@ -177,12 +162,12 @@ visudo
 # 下面一行找到注释掉
 #%wheel ALL=(ALL) ALL
 Cmnd Alias COMMAND=/bin/kill,/bin/netstat,/app/weblogic/user_projects/domains/testdomain/*.sh
-weblogic  ALL=(wls) NOPASSWD:COMMAND
+weblogic  ALL=(admin) NOPASSWD:COMMAND
 
 # 设置文件句柄数
 vi /etc/security/limits.conf
-wls hard  nofile  65535
-wls soft  nofile  65535
+admin hard  nofile  65535
+admin soft  nofile  65535
 
 # 配置服务开机自启动，以下是针对一个受管的情况
 vi /etc/rc.local
@@ -212,13 +197,13 @@ echo "export JAVA_OPTIONS" >> setDomainEnv.sh && sed -i "/umask/ s/umask 027/uma
 sed -i "/ignoreSessions s/'true'/'true',timeOut=0,force='true'" stopweblogic.sh
 ```
 
-## 创建Server
+## 1.9. 创建Server
 
 ```shell
 cd /app/weblogic/user_projects/domains/testdomain
 ./startWeblogic.sh
 浏览器登陆console，地址为http://IP:7001/console 账户密码是创建domain时脚本内设定的密码
-主页>安全领域>myrealm>领域角色>用户和组>按需求更改wls的口令
+主页>安全领域>myrealm>领域角色>用户和组>按需求更改admin的口令
 创建受管appserver1，服务器监听地址，端口从8001开始
 重启AdminServer后在bin目录下启动受管
 ./startManagedweblogic.sh appserver1 t3://IP:7001 输入配置好的新密码，控制台观察是否成功启动
@@ -228,7 +213,7 @@ cd /app/weblogic/user_projects/domains/testdomain/servers/AdminServer
 mkdir security
 cd security
 vi boot.properties
-username=wls
+username=admin
 password=之前控制台配置的密码
 cd ..
 cp -r security/ /app/weblogic/user_projects/domains/testdomain/servers/appserver1
@@ -269,16 +254,16 @@ pid=`ps -ef | grep appserver1 | grep java | grep -v grep | awk '{print $2}'`
 # 以下四个脚本配置在weblogic用户下，供应用发布使用
 cd /app/applications/testdomain/script
 vi strAdminServer.sh
-sudo -u wls /app/weblogic/user_projects/domains/testdomain/strAdminServer.sh
+sudo -u admin /app/weblogic/user_projects/domains/testdomain/strAdminServer.sh
 vi stpAdminServer.sh
-sudo -u wls /app/weblogic/user_projects/domains/testdomain/stpAdminServer.sh
+sudo -u admin /app/weblogic/user_projects/domains/testdomain/stpAdminServer.sh
 vi startappserver1.sh
-sudo -u wls /app/weblogic/user_projects/domains/testdomain/startappserver1.sh
+sudo -u admin /app/weblogic/user_projects/domains/testdomain/startappserver1.sh
 vi stopappserver1.sh
-sudo -u wls /app/weblogic/user_projects/domains/testdomain/stopappserver1.sh
+sudo -u admin /app/weblogic/user_projects/domains/testdomain/stopappserver1.sh
 ```
 
-## 控制台优化
+## 1.10. 控制台优化
 
 ```shell
 # 优化testdomain.log
@@ -293,14 +278,14 @@ http高级>access.log格式改为“扩展”>日志记录格式参数为“x-GW
 # 配置账户
 安全领域>myrealm>用户和组>用户
 创建weblogic用户并加入Deployer组，设置口令等
-同时创建monitor用户，加入Monitors用户组，密码统一设置为TP#Monitor
 # 配置SNMP
 点击中间左上角的主页（注销旁边），选择右下角SNMP
-SNMP配置，端口改为8161和7050  社区前缀TPJKpub  陷阱版本V2
+SNMP配置，端口改为8161和7050  社区前缀TESTpub  陷阱版本V2
 # 添加t3协议
 testdomain>安全>筛选器>配置如下
 连接筛选器：weblogic.security.net.ConnectionFilterImpl
-规则：
+规则：(t3网段根据实际配置来,下面仅是例子)
+# 允许10和12网段访问，屏蔽其他所有网段
 10.0.0.0/8  * * allow t3
 12.0.0.0/8  * * allow t3
 * * * deny  t3
@@ -311,7 +296,7 @@ Admin和Managed服务器>协议>取消勾选IIOP
 需要准备好数据库IP  用户名密码以及连接串等信息
 ```
 
-## 打补丁
+## 1.11. 打补丁
 
 ```shell
 补丁包分为OPatch升级工具包和补丁本身包
@@ -319,7 +304,7 @@ Admin和Managed服务器>协议>取消勾选IIOP
 unzip p28000_Generic.zip
 mv 6880880/ /app/weblogic
 cd /app/weblogic
-chown wls. -R 6880880/
+chown admin. -R 6880880/
 java -jar /app/weblogic/6880880/opatch_generic.jar -silent oracle_home/app/weblogic/ -invPtrLoc /app/install/oraInst.loc
 # 或者直接使用生成的oraInst.loc文件
 # java -jar /app/weblogic/6880880/opatch_generic.jar -silent oracle_home/app/weblogic/ -invPtrLoc /app/weblogic/oraInst.loc
