@@ -26,7 +26,7 @@ cat /etc/redhat-release
 ```shell
 # 类似下面这种
 192.168.127.14  apphost
-192.168.127.15  weblogicappli
+192.168.127.15  weblogic
 192.168.127.16  localhost
 ```
 
@@ -50,8 +50,8 @@ groupadd -g 500 admin
 useradd -u 500 -g admin -G wheel -d /home/admin admin
 useradd -u 530 -g admin -G wheel -d /home/weblogic weblogic
 # 配置口令
-echo "%TGB7ygvadmin110" | passwd --stdin admin
-echo "%TGB7ygvweblogic110" | passwd --stdin weblogic
+echo "%TGB7ygvadm110" | passwd --stdin admin
+echo "%TGB7ygvweb110" | passwd --stdin weblogic
 ```
 
 ## 1.3. 目录赋权
