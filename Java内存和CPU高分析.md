@@ -39,25 +39,25 @@ GC过程
 
 1. 新生成的对象在Eden区完成内存分配
 2. 当Eden区满,再创建对象,会因为申请不到空间而出发YoungGC,进行Young区的垃圾回收
-3. YGC时,Eden不能被回收的对象被放入到空的survivor，另一个survivor（From Survivor）里不能被GC回收的对象也会被放入To Survivor，始终保证一个survivor是空的
-4. YGC结束后，若存放对象的survivor满，则这些对象被copy到old区，或者survivor区没有满，但是有些对象已经足够Old（超过XX:MaxTenuringThreshold），也被放入Old区
-5. 当Old区被放满的之后，进行完整的垃圾回收，即 FGC
-6. FGC后，若Survivor及old区仍然无法存放从Eden复制过来的部分对象，导致JVM无法在Eden区为新对象创建内存区域，则出现OOM错误
+3. YGC时,Eden不能被回收的对象被放入到空的survivor,另一个survivor（From Survivor）里不能被GC回收的对象也会被放入To Survivor,始终保证一个survivor是空的
+4. YGC结束后,若存放对象的survivor满,则这些对象被copy到old区,或者survivor区没有满,但是有些对象已经足够Old（超过XX:MaxTenuringThreshold）,也被放入Old区
+5. 当Old区被放满的之后,进行完整的垃圾回收,即 FGC
+6. FGC后,若Survivor及old区仍然无法存放从Eden复制过来的部分对象,导致JVM无法在Eden区为新对象创建内存区域,则出现OOM错误
 
 堆内存:
 
-存放由 new 创建的对象和数组，在堆中分配的内存，由 Java 虚拟机的自动垃圾回收器来管理
+存放由 new 创建的对象和数组,在堆中分配的内存,由 Java 虚拟机的自动垃圾回收器来管理
 
 栈内存:
 
-在函数中定义的一些基本类型的变量和对象的引用变量，都是在函数的栈内存中分配
+在函数中定义的一些基本类型的变量和对象的引用变量,都是在函数的栈内存中分配
 
 ## Java内存过高问题排查
 
 ### 内存过高的两种情况
 
-- 内存溢出：程序分配的内存超过物理机内存大小，导致无法分配内存，出现OOM
-- 内存泄漏：不再使用的对象一直占用内存不释放，长时间堆积造成OOM
+- 内存溢出:程序分配的内存超过物理机内存大小,导致无法分配内存,出现OOM
+- 内存泄漏:不再使用的对象一直占用内存不释放,长时间堆积造成OOM
 
 ### 检测和分析
 
@@ -65,12 +65,12 @@ GC过程
 
     jstat [-options] pid [interval]  
 
-    支持查询的options有如下：
+    支持查询的options有如下:
 
     - class 查看类加载信息
     - compile 编译统计信息
     - gc 垃圾回收信息
-    - gcXXX 各区域GC的详细信息，如gcold
+    - gcXXX 各区域GC的详细信息,如gcold
 
     interval  每多少毫秒输出一次记录
 
@@ -83,7 +83,7 @@ GC过程
 2. 导出dump文件
 
     ```shell
-    # 如果需要进一步定位问题代码，打一下heap dump
+    # 如果需要进一步定位问题代码,打一下heap dump
     ./jmap -dump:live,format=b,file=<导出目录+文件名.hprof> <进程号>
     # 例如
     ./jmap -dump:live,format=b,file=/applog/java_dump_1234.hprof 1234
@@ -116,11 +116,11 @@ printf "%x\n" 1234
 # 去/applog/1234.txt文件里查到对应的十六进制线程号,分析问题
 ```
 
-在dump中，线程一般存在如下几种状态：
+在dump中,线程一般存在如下几种状态:
 
-1. RUNNABLE，线程处于执行中
-2. BLOCKED，线程被阻塞
-3. WAITING，线程正在等待
+1. RUNNABLE,线程处于执行中
+2. BLOCKED,线程被阻塞
+3. WAITING,线程正在等待
 
 具体实例如图
 ![20201021161756](https://deemoprobe.oss-cn-shanghai.aliyuncs.com/images/20201021161756.png)
